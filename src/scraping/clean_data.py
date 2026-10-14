@@ -1,7 +1,7 @@
 # Reverse engineering VLR player rating
 # Purpose: To reverse engineer the VLR.gg player rating calculation using their stat data.
 # File: clean_data.py - used to clean scraped data from vlr.
-# Mark Zhdan | 01-05-2023
+# Warren Xu
 
 import os
 import pandas as pd
@@ -12,13 +12,6 @@ def clean_percentage(column):
     return column.str.rstrip("%").astype(float)
 
 
-def split_player_name(player):
-    """Split player name and team if needed."""
-    if "\n" in player:
-        return player.split("\n")
-    return player, None
-
-
 csv_files = [file for file in os.listdir("data/raw") if file.endswith(".csv")]
 
 for file in csv_files:
@@ -27,15 +20,14 @@ for file in csv_files:
     df = pd.read_csv(file_path)
 
     # Clean cols with percentages
-    percentage_columns = ["KAST", "HS%", "CL%"]
+    percentage_columns = ["KAST", "HS%", "CL%", "FKPR", "FDPR"]
     for col in percentage_columns:
         if col in df.columns:
             df[col] = clean_percentage(df[col])
 
-    df["KAST"] = df["KAST"] / 100
-
-    # Remove "\n" from Player name
-    df["Player"], df["Team"] = zip(*df["Player"].apply(split_player_name))
+    # KAST, FKPR and FDPR are used as per-round rates, not percentages
+    for col in ["KAST", "FKPR", "FDPR"]:
+        df[col] = df[col] / 100
 
     # Calculates DPR
     if "D" in df.columns and "Rnd" in df.columns:
@@ -74,6 +66,13 @@ for file in csv_files:
         "FD",
     ]
     df.dropna(subset=required_columns, inplace=True)
+
+    # Some matches (mostly 2023 China league) lack full round data, so VLR's first-kill
+    # count disagrees with its own FK% and the rating doesn't follow the usual formula.
+    # Drop players whose FK count and FK% differ by more than 2 percentage points.
+    inconsistent = (df["FK"] / df["Rnd"] - df["FKPR"]).abs() > 0.02
+    df = df[~inconsistent]
+    print(f"{file}: dropped {inconsistent.sum()} players with incomplete match data")
 
     # Remove unnecessary cols
     df.drop(columns=["Rnd", "CL", "KMax", "Team"], inplace=True)

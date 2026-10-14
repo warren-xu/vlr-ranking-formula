@@ -1,0 +1,18 @@
+{
+  "trained_on": "data/clean/stats_alltime.csv",
+  "features": [
+    "KPR",
+    "APR",
+    "DPR",
+    "ADRa",
+    "KAST"
+  ],
+  "coefficients": {
+    "KPR": 0.960516,
+    "APR": 0.157361,
+    "DPR": -0.954825,
+    "ADRa": 0.0022,
+    "KAST": 0.371905
+  },
+  "intercept": 0.612311
+}
